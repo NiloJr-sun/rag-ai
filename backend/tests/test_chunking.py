@@ -5,6 +5,8 @@ from __future__ import annotations
 import pytest
 
 from app.rag.chunking import (
+    DEFAULT_CHUNK_OVERLAP,
+    DEFAULT_CHUNK_SIZE,
     ChunkingError,
     chunk_by_sentence,
     chunk_fixed,
@@ -13,7 +15,13 @@ from app.rag.chunking import (
 
 
 def test_short_text_is_one_chunk() -> None:
-    assert chunk_fixed("hello", size=100) == ["hello"]
+    assert chunk_fixed("hello", size=100, overlap=0) == ["hello"]
+
+
+def test_the_defaults_are_usable_together() -> None:
+    """Guards against an overlap default that exceeds the size default."""
+    assert 0 <= DEFAULT_CHUNK_OVERLAP < DEFAULT_CHUNK_SIZE
+    assert chunk_fixed("hello") == ["hello"]
 
 
 def test_empty_text_yields_no_chunks() -> None:
