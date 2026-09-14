@@ -10,11 +10,11 @@
 
 ### T1.1 — Learn Embeddings
 
-- [ ] Understand what embeddings are
-- [ ] Generate embeddings using a local Ollama embedding model
-- [ ] Experiment with embeddings for similar/different sentences
-- [ ] Understand embedding dimensions
-- [ ] Document observations
+- [x] Understand what embeddings are
+- [x] Generate embeddings using a local Ollama embedding model
+- [x] Experiment with embeddings for similar/different sentences
+- [x] Understand embedding dimensions
+- [x] Document observations
 
 **Output:** Small script demonstrating text → embedding.
 
@@ -22,10 +22,10 @@
 
 ### T1.2 — Learn Cosine Similarity
 
-- [ ] Understand cosine similarity
-- [ ] Implement cosine similarity manually
-- [ ] Compare vectors generated from similar/different text
-- [ ] Understand similarity scores and their limitations
+- [x] Understand cosine similarity
+- [x] Implement cosine similarity manually
+- [x] Compare vectors generated from similar/different text
+- [x] Understand similarity scores and their limitations
 
 **Output:** Script that ranks text by similarity to a query.
 
@@ -33,11 +33,11 @@
 
 ### T1.3 — Learn Chunking Strategies
 
-- [ ] Understand why documents need to be chunked
-- [ ] Implement fixed-size chunking
-- [ ] Experiment with different chunk sizes
-- [ ] Compare sentence-based vs fixed-size chunking
-- [ ] Document trade-offs
+- [x] Understand why documents need to be chunked
+- [x] Implement fixed-size chunking
+- [x] Experiment with different chunk sizes
+- [x] Compare sentence-based vs fixed-size chunking
+- [x] Document trade-offs
 
 **Output:** Chunking module with configurable chunk size.
 
@@ -59,11 +59,11 @@
 
 ### T1.5 — Set Up Ollama
 
-- [ ] Install Ollama
-- [ ] Select embedding model
-- [ ] Select chat model
-- [ ] Verify models locally
-- [ ] Test embedding generation
+- [x] Install Ollama
+- [x] Select embedding model
+- [x] Select chat model
+- [x] Verify models locally
+- [x] Test embedding generation
 - [ ] Test chat completion
 
 **Output:** Local Ollama setup documented.
