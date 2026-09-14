@@ -1,0 +1,26 @@
+name: Dependencies
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Keyed on the workflow name as well as the ref, so these five do not cancel
+# each other out.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-backend
+
+      - name: Verify the package imports
+        run: python -c "from app.rag.embeddings import embed_text; print('import ok')"
