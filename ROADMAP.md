@@ -45,13 +45,13 @@
 
 ### T1.4 — Set Up Supabase + pgvector
 
-- [ ] Create Supabase project
-- [ ] Enable pgvector
-- [ ] Create documents table
-- [ ] Create document chunks table
-- [ ] Add embedding vector column
-- [ ] Add basic indexes
-- [ ] Test inserting and retrieving vectors
+- [x] Create Supabase project
+- [x] Enable pgvector
+- [x] Create documents table
+- [x] Create document chunks table
+- [x] Add embedding vector column
+- [x] Add basic indexes
+- [x] Test inserting and retrieving vectors
 
 **Output:** Working Supabase pgvector database.
 
