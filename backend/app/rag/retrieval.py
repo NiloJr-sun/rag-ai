@@ -121,4 +121,7 @@ def search(
     from app.storage.supabase import search_chunks
 
     question_vector = embed_text(question, client=client)
-    return search_chunks(conn, question_vector, top_k=top_k or top_k_from_env())
+    # `is None` rather than `or`: an explicit 0 must reach search_chunks,
+    # which rejects it, instead of quietly becoming the default.
+    resolved = top_k_from_env() if top_k is None else top_k
+    return search_chunks(conn, question_vector, top_k=resolved)

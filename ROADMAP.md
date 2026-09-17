@@ -64,7 +64,7 @@
 - [x] Select chat model
 - [x] Verify models locally
 - [x] Test embedding generation
-- [ ] Test chat completion
+- [x] Test chat completion
 
 **Output:** Local Ollama setup documented.
 
@@ -72,11 +72,11 @@
 
 ### T1.6 — Implement Document Chunking
 
-- [ ] Read local text files
-- [ ] Split documents into chunks
-- [ ] Generate stable document/chunk IDs
-- [ ] Preserve original document information
-- [ ] Return structured chunks
+- [x] Read local text files
+- [x] Split documents into chunks
+- [x] Generate stable document/chunk IDs
+- [x] Preserve original document information
+- [x] Return structured chunks
 
 **Output:** `file → chunks`
 
@@ -84,10 +84,10 @@
 
 ### T1.7 — Implement Embedding Pipeline
 
-- [ ] Generate embedding for each chunk
-- [ ] Attach embeddings to chunks
-- [ ] Handle embedding failures
-- [ ] Measure embedding generation time
+- [x] Generate embedding for each chunk
+- [x] Attach embeddings to chunks
+- [x] Handle embedding failures
+- [x] Measure embedding generation time
 
 **Output:** `chunks → embeddings`
 
@@ -95,11 +95,11 @@
 
 ### T1.8 — Store Chunks in Supabase
 
-- [ ] Insert documents
-- [ ] Insert chunks
-- [ ] Store embeddings
-- [ ] Verify stored vectors
-- [ ] Implement basic cleanup/reset functionality
+- [x] Insert documents
+- [x] Insert chunks
+- [x] Store embeddings
+- [x] Verify stored vectors
+- [x] Implement basic cleanup/reset functionality
 
 **Output:** `chunks + embeddings → Supabase`
 
@@ -107,11 +107,11 @@
 
 ### T1.9 — Implement Vector Retrieval
 
-- [ ] Generate embedding for a user query
-- [ ] Perform vector similarity search
-- [ ] Return top-k chunks
-- [ ] Experiment with different k values
-- [ ] Inspect retrieved chunks manually
+- [x] Generate embedding for a user query
+- [x] Perform vector similarity search
+- [x] Return top-k chunks
+- [x] Experiment with different k values
+- [x] Inspect retrieved chunks manually
 
 **Output:** `query → relevant chunks`
 
@@ -119,10 +119,10 @@
 
 ### T1.10 — Implement Basic RAG Answering
 
-- [ ] Build prompt containing retrieved chunks
-- [ ] Send prompt to Ollama chat model
-- [ ] Generate answer
-- [ ] Return answer + retrieved sources
+- [x] Build prompt containing retrieved chunks
+- [x] Send prompt to Ollama chat model
+- [x] Generate answer
+- [x] Return answer + retrieved sources
 
 **Output:** `question → retrieve → answer`
 
@@ -130,12 +130,12 @@
 
 ### T1.11 — Complete Basic RAG CLI
 
-- [ ] Connect all components
-- [ ] Add CLI interface
-- [ ] Support multiple local files
-- [ ] Ask questions interactively
-- [ ] Display retrieved sources
-- [ ] Document how to run it
+- [x] Connect all components
+- [x] Add CLI interface
+- [x] Support multiple local files
+- [x] Ask questions interactively
+- [x] Display retrieved sources
+- [x] Document how to run it
 
 **Target 1 Complete When:**
 

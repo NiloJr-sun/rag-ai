@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import pytest
 
-OLLAMA_VARS = ("OLLAMA_BASE_URL", "OLLAMA_EMBEDDING_MODEL")
+OLLAMA_VARS = (
+    "OLLAMA_BASE_URL",
+    "OLLAMA_EMBEDDING_MODEL",
+    "OLLAMA_CHAT_MODEL",
+)
 
 
 @pytest.fixture(autouse=True)
