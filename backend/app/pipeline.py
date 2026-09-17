@@ -16,6 +16,8 @@ import psycopg
 
 from app.rag.chunking import DEFAULT_CHUNK_SIZE, chunk_document, content_hash
 from app.rag.embeddings import embed_chunks
+from app.rag.generation import Answer, generate_answer
+from app.rag.retrieval import search
 from app.storage import supabase
 
 SUPPORTED_SUFFIXES = {".txt", ".md"}
@@ -103,3 +105,20 @@ def ingest_path(
         )
         for path in find_documents(target)
     ]
+
+
+def answer_question(
+    question: str,
+    *,
+    conn: psycopg.Connection,
+    client: httpx.Client | None = None,
+    top_k: int | None = None,
+) -> Answer:
+    """The query half of the loop: question -> retrieve -> answer.
+
+    ``top_k`` is passed through untouched, so an explicit 0 reaches
+    search_chunks and is rejected there rather than being mistaken for
+    "unspecified" and silently replaced by the default.
+    """
+    matches = search(conn, question, top_k=top_k, client=client)
+    return generate_answer(question, matches, client=client)

@@ -38,16 +38,18 @@ def _model() -> str:
     return os.environ.get("OLLAMA_EMBEDDING_MODEL", DEFAULT_MODEL)
 
 
-def _status_error_detail(exc: httpx.HTTPStatusError) -> str:
+def ollama_error_detail(exc: httpx.HTTPStatusError) -> str:
     """Pull Ollama's own message out of an error response.
 
     A missing model answers 404 with {"error": "model ... not found, try
     pulling it first"}, which is far more useful than the status code alone.
+    Shared with app.rag.generation, which hits the same API.
     """
     try:
-        message = exc.response.json().get("error")
+        body = exc.response.json()
     except ValueError:
-        message = None
+        body = None
+    message = body.get("error") if isinstance(body, dict) else None
     return str(message or exc.response.text or exc)
 
 
@@ -71,7 +73,7 @@ def embed_text(text: str, *, client: httpx.Client | None = None) -> list[float]:
         body = response.json()
     except httpx.HTTPStatusError as exc:
         raise EmbeddingError(
-            f"Ollama returned {exc.response.status_code}: {_status_error_detail(exc)}"
+            f"Ollama returned {exc.response.status_code}: {ollama_error_detail(exc)}"
         ) from exc
     except httpx.HTTPError as exc:
         raise EmbeddingError(f"Request to Ollama failed: {exc}") from exc
