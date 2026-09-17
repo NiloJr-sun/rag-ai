@@ -18,7 +18,9 @@ docs/rag/retrieval.md.
 
 from __future__ import annotations
 
+import hashlib
 import re
+from dataclasses import dataclass
 
 DEFAULT_CHUNK_SIZE = 1000
 DEFAULT_CHUNK_OVERLAP = 150
@@ -98,3 +100,66 @@ def chunk_by_sentence(text: str, *, max_size: int = DEFAULT_CHUNK_SIZE) -> list[
     if current:
         chunks.append(" ".join(current))
     return chunks
+
+
+@dataclass(frozen=True)
+class Chunk:
+    """One embeddable piece of a document, with enough context to cite it.
+
+    The fields mirror the columns in backend/migrations/0001_init.sql.
+    """
+
+    document_id: str
+    chunk_id: str
+    chunk_index: int
+    text: str
+    source: str
+
+
+def document_id_for(source: str) -> str:
+    """Stable id for a document, derived from where it came from.
+
+    Deriving rather than generating means re-ingesting the same file produces
+    the same id, so the row is updated instead of duplicated (T5.9).
+    """
+    return hashlib.sha256(source.encode()).hexdigest()[:16]
+
+
+def chunk_id_for(document_id: str, chunk_index: int) -> str:
+    """Stable id for a chunk, derived from its position in the document.
+
+    Positional rather than content-derived on purpose: when a document is
+    edited, chunk 3 stays chunk 3 and its row is overwritten. Hashing the
+    content instead would mint a new id and orphan the old row.
+    """
+    return f"{document_id}-{chunk_index:04d}"
+
+
+def content_hash(text: str) -> str:
+    """Hash of a document's contents, for skipping unchanged files (T5.4)."""
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
+def chunk_document(
+    text: str,
+    *,
+    source: str,
+    max_size: int = DEFAULT_CHUNK_SIZE,
+) -> list[Chunk]:
+    """Split ``text`` into structured chunks tagged with their origin.
+
+    Uses sentence packing rather than fixed windows: see docs/rag/chunking.md
+    for the measurement behind that choice -- fixed windows scored higher but
+    returned fragments beginning mid-word.
+    """
+    document_id = document_id_for(source)
+    return [
+        Chunk(
+            document_id=document_id,
+            chunk_id=chunk_id_for(document_id, index),
+            chunk_index=index,
+            text=piece,
+            source=source,
+        )
+        for index, piece in enumerate(chunk_by_sentence(text, max_size=max_size))
+    ]
