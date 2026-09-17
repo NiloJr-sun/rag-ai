@@ -14,7 +14,17 @@ with "different length of text".
 from __future__ import annotations
 
 import math
+import os
 from collections.abc import Iterable, Sequence
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle only matters at runtime
+    import httpx
+    import psycopg
+
+    from app.storage.supabase import ChunkMatch
+
+DEFAULT_TOP_K = 5
 
 
 class SimilarityError(ValueError):
@@ -71,3 +81,44 @@ def rank_by_similarity(
     ]
     scored.sort(key=lambda pair: pair[1], reverse=True)
     return scored
+
+
+def top_k_from_env() -> int:
+    """How many chunks to retrieve, overridable with RETRIEVAL_TOP_K.
+
+    Worth tuning rather than guessing: too few and the model has no context
+    to answer from, too many and the prompt fills with irrelevant text that
+    drags the answer off course (T2.8, T3.8).
+    """
+    raw = os.environ.get("RETRIEVAL_TOP_K")
+    if not raw:
+        return DEFAULT_TOP_K
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise SimilarityError(
+            f"RETRIEVAL_TOP_K must be an integer, got {raw!r}"
+        ) from exc
+    if value <= 0:
+        raise SimilarityError(f"RETRIEVAL_TOP_K must be positive, got {value}")
+    return value
+
+
+def search(
+    conn: psycopg.Connection,
+    question: str,
+    *,
+    top_k: int | None = None,
+    client: httpx.Client | None = None,
+) -> list[ChunkMatch]:
+    """Embed ``question`` and return the closest stored chunks.
+
+    This is the database-backed counterpart to rank_by_similarity: same
+    measure, but Postgres does the comparison against an index instead of
+    Python looping over every vector in memory.
+    """
+    from app.rag.embeddings import embed_text
+    from app.storage.supabase import search_chunks
+
+    question_vector = embed_text(question, client=client)
+    return search_chunks(conn, question_vector, top_k=top_k or top_k_from_env())
