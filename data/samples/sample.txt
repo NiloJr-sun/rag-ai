@@ -1,0 +1,29 @@
+Document 1: Vector Databases
+
+Vector databases are designed to store and search numerical representations of data called embeddings. An embedding converts text into a vector of numbers that captures its semantic meaning. Similar pieces of text should produce vectors that are close together in the embedding space.
+
+A common similarity metric is cosine similarity. It measures how similar two vectors are based on the angle between them rather than their absolute magnitude. This makes cosine similarity useful for semantic search and retrieval systems.
+
+Document 2: Retrieval-Augmented Generation
+
+Retrieval-Augmented Generation, or RAG, combines information retrieval with a language model. Instead of asking the language model to rely only on its training knowledge, a RAG system first searches a collection of documents for relevant information.
+
+The retrieved text is then provided to the language model as context. The model uses this context to generate an answer. This approach can make answers more grounded in a specific set of documents and can also provide citations or references to the original sources.
+
+Document 3: Chunking
+
+Chunking is the process of splitting a large document into smaller pieces before generating embeddings. Smaller chunks make it easier for a retrieval system to find the specific part of a document that is relevant to a question.
+
+A chunk can contain a fixed number of characters, words, or tokens. Another approach is to split documents based on their structure, such as paragraphs, headings, or sections. Chunk overlap can also be used so that important information near the boundary of two chunks is not lost.
+
+Document 4: Cooking Pasta
+
+Cooking pasta is a simple process. First, bring a large pot of salted water to a boil. Add the pasta and cook it according to the instructions on the package. Stir occasionally to prevent the pasta from sticking together.
+
+When the pasta is cooked, drain the water and combine the pasta with your preferred sauce. Common sauces include tomato sauce, pesto, and cream-based sauces.
+
+Document 5: Embeddings in Practice
+
+Text embeddings are useful for more than just RAG systems. They can be used for semantic search, document clustering, recommendation systems, duplicate detection, and classification.
+
+For example, the sentences "How do I search documents using vectors?" and "What is semantic search?" may use different words but have similar meanings. An embedding model should represent these sentences with vectors that are relatively close to each other.
