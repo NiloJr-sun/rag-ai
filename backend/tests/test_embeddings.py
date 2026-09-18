@@ -11,7 +11,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 
-from app.rag import embeddings
+from app import config
 from app.rag.embeddings import EmbeddingError, embed_text
 
 Handler = Callable[[httpx.Request], httpx.Response]
@@ -41,7 +41,7 @@ def test_sends_model_and_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
     with _client(handler) as client:
         embed_text("some text", client=client)
 
-    assert seen["url"] == f"{embeddings.DEFAULT_BASE_URL}/api/embeddings"
+    assert seen["url"] == f"{config.DEFAULT_OLLAMA_BASE_URL}/api/embeddings"
     assert seen["body"] == {"model": "some-other-model", "prompt": "some text"}
 
 

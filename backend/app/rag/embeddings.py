@@ -6,20 +6,14 @@ library, so the request and response stay visible while learning.
 
 from __future__ import annotations
 
-import os
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 import httpx
 
+from app.config import embedding_model, ollama_base_url
 from app.rag.chunking import Chunk
-
-# Defaults live here, not in a config file. Set the matching environment
-# variable to override -- which is how Docker points at another host (T6.1)
-# and how T3.7 swaps embedding models.
-DEFAULT_BASE_URL = "http://localhost:11434"
-DEFAULT_MODEL = "nomic-embed-text"
 
 # The first call after a cold start includes loading the model into memory,
 # which is far slower than the embedding itself.
@@ -28,14 +22,6 @@ DEFAULT_TIMEOUT_SECONDS = 60.0
 
 class EmbeddingError(RuntimeError):
     """Ollama did not return a usable embedding."""
-
-
-def _base_url() -> str:
-    return os.environ.get("OLLAMA_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
-
-
-def _model() -> str:
-    return os.environ.get("OLLAMA_EMBEDDING_MODEL", DEFAULT_MODEL)
 
 
 def ollama_error_detail(exc: httpx.HTTPStatusError) -> str:
@@ -66,8 +52,8 @@ def embed_text(text: str, *, client: httpx.Client | None = None) -> list[float]:
     client = client or httpx.Client(timeout=DEFAULT_TIMEOUT_SECONDS)
     try:
         response = client.post(
-            f"{_base_url()}/api/embeddings",
-            json={"model": _model(), "prompt": text},
+            f"{ollama_base_url()}/api/embeddings",
+            json={"model": embedding_model(), "prompt": text},
         )
         response.raise_for_status()
         body = response.json()
@@ -85,7 +71,9 @@ def embed_text(text: str, *, client: httpx.Client | None = None) -> list[float]:
     embedding = body.get("embedding")
     if not embedding:
         detail = body.get("error", body)
-        raise EmbeddingError(f"No embedding returned for model {_model()!r}: {detail}")
+        raise EmbeddingError(
+            f"No embedding returned for model {embedding_model()!r}: {detail}"
+        )
 
     return [float(value) for value in embedding]
 
