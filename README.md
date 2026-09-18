@@ -8,6 +8,22 @@ which is idempotent and safe to re-run on a fresh clone.
 
 ## Running it
 
+Common tasks are wrapped in the [Makefile](Makefile) — `make` on its own
+lists them:
+
+```bash
+make venv        # create .venv and install the backend
+make dev         # API with auto-reload on :8000
+make check       # everything CI runs: lint, types, tests
+make db-up       # throwaway pgvector container, migration applied
+make test-all    # unit tests plus the storage integration tests
+make ingest      # ingest data/samples
+make ask Q="how do I cook pasta?"
+```
+
+Every target calls `.venv/bin/` directly, so none of them need an activated
+virtualenv.
+
 Prerequisites: [Ollama](https://ollama.com), Python 3.12, and a Postgres with
 pgvector (a Supabase project, or `pgvector/pgvector:pg16` in Docker).
 
