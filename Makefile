@@ -22,7 +22,7 @@ TEST_DSN     := postgresql://postgres:test@127.0.0.1:55432/postgres
 
 .DEFAULT_GOAL := help
 .PHONY: help setup doctor venv models env dev test test-all check fmt lint types \
-        ingest ask db-up db-down clean
+        ingest reset ask db-up db-down clean
 
 help:  ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -99,8 +99,11 @@ fmt:  ## Apply ruff formatting and autofixes
 types:  ## mypy
 	$(MYPY) backend
 
-ingest:  ## Ingest data/samples (override: make ingest ARGS="--reset")
+ingest:  ## Ingest data/samples; replaces each document's chunks in place
 	$(PY) scripts/ingest.py data/samples --max-size 500 $(ARGS)
+
+reset:  ## Empty both tables, then re-ingest data/samples
+	$(MAKE) ingest ARGS="--reset"
 
 ask:  ## Ask interactively (or: make ask Q="how do I cook pasta?")
 	$(PY) scripts/ask.py $(Q)
