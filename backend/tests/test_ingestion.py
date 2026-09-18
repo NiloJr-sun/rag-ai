@@ -11,6 +11,7 @@ from collections.abc import Callable
 import httpx
 import pytest
 
+from app.config import DEFAULT_TOP_K, ConfigError, top_k
 from app.rag.chunking import (
     Chunk,
     chunk_document,
@@ -19,7 +20,6 @@ from app.rag.chunking import (
     document_id_for,
 )
 from app.rag.embeddings import EmbeddingError, embed_chunks
-from app.rag.retrieval import DEFAULT_TOP_K, SimilarityError, top_k_from_env
 
 TEXT = "Alpha beta gamma. Delta epsilon zeta. Eta theta iota. Kappa lambda mu."
 Handler = Callable[[httpx.Request], httpx.Response]
@@ -129,17 +129,17 @@ def test_embed_chunks_can_skip_failures() -> None:
 
 def test_top_k_defaults_and_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("RETRIEVAL_TOP_K", raising=False)
-    assert top_k_from_env() == DEFAULT_TOP_K
+    assert top_k() == DEFAULT_TOP_K
 
     monkeypatch.setenv("RETRIEVAL_TOP_K", "12")
-    assert top_k_from_env() == 12
+    assert top_k() == 12
 
 
 def test_a_nonsense_top_k_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("RETRIEVAL_TOP_K", "not-a-number")
-    with pytest.raises(SimilarityError, match="must be an integer"):
-        top_k_from_env()
+    with pytest.raises(ConfigError, match="must be an integer"):
+        top_k()
 
     monkeypatch.setenv("RETRIEVAL_TOP_K", "0")
-    with pytest.raises(SimilarityError, match="must be positive"):
-        top_k_from_env()
+    with pytest.raises(ConfigError, match="must be positive"):
+        top_k()

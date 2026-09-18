@@ -161,11 +161,11 @@ answer
 
 ### T2.1 — Create FastAPI Application
 
-- [ ] Set up FastAPI project
-- [ ] Define project structure
-- [ ] Add configuration management
-- [ ] Add health endpoint
-- [ ] Add API documentation
+- [x] Set up FastAPI project
+- [x] Define project structure
+- [x] Add configuration management
+- [x] Add health endpoint
+- [x] Add API documentation
 
 **Output:** Running FastAPI service.
 

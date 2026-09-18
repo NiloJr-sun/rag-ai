@@ -46,9 +46,39 @@ Each primitive has a demo script and a write-up in [docs/rag/](docs/rag/):
 | `scripts/search_demo.py` | retrieval from the database at several k |
 | `scripts/verify_supabase.py` | schema check: pgvector agrees with Python |
 
+### API
+
+```bash
+uvicorn app.api.main:app --reload
+```
+
+| route | purpose |
+|---|---|
+| `/docs` | interactive API documentation |
+| `/openapi.json` | OpenAPI schema |
+| `/health` | liveness; touches nothing |
+| `/health/ready` | readiness; reports whether Postgres and Ollama are reachable |
+| `/config` | effective settings, with no secret values |
+
+`API_HOST` and `API_PORT` are read from the environment; see
+[.env.example](.env.example).
+
 ### Tests
 
 ```bash
-pytest backend/tests                        # unit tests, no services needed
-DATABASE_URL=... pytest backend/tests       # adds the storage integration tests
+pytest backend/tests          # unit tests; no database or Ollama needed
+```
+
+The storage integration tests insert and delete rows, so they skip unless
+`TEST_DATABASE_URL` is set — deliberately a separate variable from
+`DATABASE_URL`, which `app/config.py` loads from `.env` and which therefore
+points at the database you actually work against. Use a throwaway one:
+
+```bash
+docker run -d --rm --name ragpg -e POSTGRES_PASSWORD=test \
+  -p 55432:5432 pgvector/pgvector:pg16
+psql postgresql://postgres:test@127.0.0.1:55432/postgres \
+  -f backend/migrations/0001_init.sql
+TEST_DATABASE_URL=postgresql://postgres:test@127.0.0.1:55432/postgres \
+  pytest backend/tests
 ```

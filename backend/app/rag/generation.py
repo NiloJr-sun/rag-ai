@@ -9,17 +9,15 @@ instead. T3.5 measures that as faithfulness.
 
 from __future__ import annotations
 
-import os
 import time
 from collections.abc import Sequence
 from dataclasses import dataclass
 
 import httpx
 
-from app.rag.embeddings import DEFAULT_BASE_URL, ollama_error_detail
+from app.config import chat_model, ollama_base_url
+from app.rag.embeddings import ollama_error_detail
 from app.storage.supabase import ChunkMatch
-
-DEFAULT_CHAT_MODEL = "qwen2"
 
 # Generation is far slower than embedding -- a few seconds warm, much longer on
 # a cold model load -- so it gets its own budget rather than borrowing the
@@ -71,14 +69,6 @@ class Answer:
         )
 
 
-def _base_url() -> str:
-    return os.environ.get("OLLAMA_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
-
-
-def _chat_model() -> str:
-    return os.environ.get("OLLAMA_CHAT_MODEL", DEFAULT_CHAT_MODEL)
-
-
 def build_context(matches: Sequence[ChunkMatch]) -> str:
     """Render chunks as numbered blocks the model can cite by number."""
     return "\n\n".join(
@@ -101,9 +91,9 @@ def generate_answer(
     started = time.perf_counter()
     try:
         response = client.post(
-            f"{_base_url()}/api/chat",
+            f"{ollama_base_url()}/api/chat",
             json={
-                "model": _chat_model(),
+                "model": chat_model(),
                 # Ollama streams newline-delimited JSON by default, which
                 # would make .json() fail on the second line. T4.4 turns
                 # streaming back on deliberately.
@@ -142,7 +132,7 @@ def generate_answer(
     content = body.get("message", {}).get("content")
     if not content:
         raise GenerationError(
-            f"No answer returned for model {_chat_model()!r}: {body.get('error', body)}"
+            f"No answer returned for model {chat_model()!r}: {body.get('error', body)}"
         )
 
     return Answer(

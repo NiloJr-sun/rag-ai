@@ -1,14 +1,19 @@
 """Integration tests for the storage layer (T1.8).
 
 These need a real Postgres with pgvector and the migration applied, so they
-skip unless DATABASE_URL is set. CI has no database, and that is fine: the
-logic worth unit-testing lives in chunking and embeddings.
+skip unless TEST_DATABASE_URL is set. CI has no database, and that is fine:
+the logic worth unit-testing lives in chunking and embeddings.
+
+TEST_DATABASE_URL deliberately, not DATABASE_URL: app.config loads the
+repo-root .env, so DATABASE_URL is almost always present now and using it
+here would silently point these tests at whatever database you actually
+work against. They insert and delete rows.
 
     docker run -d --rm --name ragpg -e POSTGRES_PASSWORD=test \
       -p 55432:5432 pgvector/pgvector:pg16
     psql postgresql://postgres:test@127.0.0.1:55432/postgres \
       -f backend/migrations/0001_init.sql
-    DATABASE_URL=postgresql://postgres:test@127.0.0.1:55432/postgres \
+    TEST_DATABASE_URL=postgresql://postgres:test@127.0.0.1:55432/postgres \
       pytest backend/tests
 """
 
@@ -24,11 +29,11 @@ from app.rag.chunking import chunk_document
 from app.rag.embeddings import EmbeddedChunk
 from app.storage import supabase
 
-DSN = os.environ.get("DATABASE_URL")
+DSN = os.environ.get("TEST_DATABASE_URL")
 TEXT = "Alpha beta gamma. Delta epsilon zeta. Eta theta iota. Kappa lambda mu."
 SOURCE = "tests/fixture-document.txt"
 
-pytestmark = pytest.mark.skipif(not DSN, reason="DATABASE_URL is not set")
+pytestmark = pytest.mark.skipif(not DSN, reason="TEST_DATABASE_URL is not set")
 
 
 def _embedded(source: str = SOURCE, max_size: int = 40) -> list[EmbeddedChunk]:
@@ -138,6 +143,7 @@ def test_missing_chunk_has_no_embedding(conn: psycopg.Connection) -> None:
 
 def test_connect_without_a_dsn_is_an_error(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("TEST_DATABASE_URL", raising=False)
     with pytest.raises(supabase.StorageError, match="DATABASE_URL"):
         supabase.connect()
 
@@ -153,8 +159,9 @@ def test_search_returns_closest_first(conn: psycopg.Connection) -> None:
     conn.commit()
 
     target = embedded[1].embedding
-    matches = supabase.search_chunks(conn, target, top_k=len(embedded))
+    matches = supabase.search_chunks(conn, target, top_k=50)
 
+    # An exact-match vector must win outright, whatever else is in the table.
     assert matches[0].chunk_id == embedded[1].chunk.chunk_id
     assert matches[0].similarity == pytest.approx(1.0)
     assert matches[0].source == SOURCE
@@ -173,9 +180,10 @@ def test_search_honours_top_k(conn: psycopg.Connection) -> None:
     conn.commit()
 
     assert len(supabase.search_chunks(conn, embedded[1].embedding, top_k=1)) == 1
-    assert len(supabase.search_chunks(conn, embedded[1].embedding, top_k=99)) == len(
-        embedded
-    )
+    # top_k caps the result count; the table may hold rows beyond the fixture's.
+    wide = supabase.search_chunks(conn, embedded[1].embedding, top_k=2)
+    assert len(wide) == 2
+    assert supabase.count_chunks(conn, document_id) == len(embedded)
 
 
 def test_search_rejects_a_useless_top_k(conn: psycopg.Connection) -> None:
@@ -203,5 +211,6 @@ def test_a_zero_vector_is_unsearchable(conn: psycopg.Connection) -> None:
     conn.commit()
 
     assert supabase.count_chunks(conn, document_id) == 2
-    matches = supabase.search_chunks(conn, embedded[1].embedding, top_k=99)
-    assert [m.chunk_index for m in matches] == [1]
+    matches = supabase.search_chunks(conn, embedded[1].embedding, top_k=50)
+    ours = [m.chunk_index for m in matches if m.document_id == document_id]
+    assert ours == [1], "the zeroed chunk must be stored yet unreachable"
