@@ -12,16 +12,65 @@ UVICORN := $(VENV)/bin/uvicorn
 
 # Throwaway Postgres for the integration tests. Port 55432 so it cannot
 # collide with a real Postgres on 5432.
+EMBED_MODEL := nomic-embed-text
+CHAT_MODEL  := qwen2
+OLLAMA_URL  := http://localhost:11434
+
 PG_CONTAINER := ragpg
 PG_IMAGE     := pgvector/pgvector:pg16
 TEST_DSN     := postgresql://postgres:test@127.0.0.1:55432/postgres
 
 .DEFAULT_GOAL := help
-.PHONY: help venv dev test test-all check fmt lint types ingest ask db-up db-down clean
+.PHONY: help setup doctor venv models env dev test test-all check fmt lint types \
+        ingest ask db-up db-down clean
 
 help:  ## Show this help
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 	  | awk -F':.*?## ' '{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
+
+setup: doctor venv models env db-up ingest  ## One command for a fresh clone
+	@echo
+	@echo "Setup complete. Next:"
+	@echo "  make ask Q=\"how do I cook pasta?\"   ask a question"
+	@echo "  make dev                             API on http://127.0.0.1:8000"
+
+doctor:  ## Check that the tools this project needs are installed
+	@missing=0; \
+	for tool in uv docker ollama psql; do \
+	  if command -v $$tool >/dev/null 2>&1; then \
+	    echo "  ok       $$tool"; \
+	  else \
+	    echo "  MISSING  $$tool"; missing=1; \
+	  fi; \
+	done; \
+	if curl -s -m 2 $(OLLAMA_URL)/api/tags >/dev/null 2>&1; then \
+	  echo "  ok       ollama serving on $(OLLAMA_URL)"; \
+	else \
+	  echo "  MISSING  ollama is installed but not serving -- run: ollama serve"; \
+	  missing=1; \
+	fi; \
+	if [ $$missing -ne 0 ]; then \
+	  echo; \
+	  echo "Install what is missing, then re-run. On macOS:"; \
+	  echo "  brew install uv ollama libpq && brew install --cask docker"; \
+	  exit 1; \
+	fi
+
+models:  ## Pull the Ollama models (skips any already present)
+	@ollama list | grep -q "^$(EMBED_MODEL)" \
+	  || ollama pull $(EMBED_MODEL)
+	@ollama list | grep -q "^$(CHAT_MODEL)" \
+	  || ollama pull $(CHAT_MODEL)
+	@echo "models ready: $(EMBED_MODEL), $(CHAT_MODEL)"
+
+env:  ## Create .env from the template, pointed at the local container
+	@if [ -f .env ]; then \
+	  echo ".env already exists, leaving it alone"; \
+	else \
+	  sed 's|^DATABASE_URL=$$|DATABASE_URL=$(TEST_DSN)|' .env.example > .env; \
+	  echo "wrote .env pointing at the local container"; \
+	  echo "  edit DATABASE_URL to use Supabase instead"; \
+	fi
 
 venv:  ## Create the virtualenv and install the backend with dev extras
 	uv venv --python 3.12 $(VENV)

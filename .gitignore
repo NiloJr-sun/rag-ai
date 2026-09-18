@@ -17,9 +17,15 @@ node_modules/
 .next/
 out/
 
-# Local data: Drive downloads, temp files, sample corpora.
-# Recreated empty by scripts/scaffold.sh.
-data/
+# Local data: Drive downloads and temp files. The one sample document is
+# tracked, so a fresh clone can run `make ingest` and ask a question without
+# having to supply a corpus first.
+# Note: data/* not data/ -- git will not descend into an excluded directory,
+# so a negation inside one has no effect.
+data/*
+!data/samples/
+data/samples/*
+!data/samples/sample.txt
 
 # OS
 .DS_Store
