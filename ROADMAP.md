@@ -173,12 +173,12 @@ answer
 
 ### T2.2 — Create Document Ingestion API
 
-- [ ] Add document upload endpoint
-- [ ] Validate supported file types
-- [ ] Parse uploaded files
-- [ ] Chunk documents
-- [ ] Generate embeddings
-- [ ] Store documents/chunks
+- [x] Add document upload endpoint
+- [x] Validate supported file types
+- [x] Parse uploaded files
+- [x] Chunk documents
+- [x] Generate embeddings
+- [x] Store documents/chunks
 
 **Output:** API-based document ingestion.
 
