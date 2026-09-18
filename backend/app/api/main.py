@@ -10,13 +10,26 @@ Run it with:
 
 from __future__ import annotations
 
-from typing import Any
+from pathlib import Path
+from typing import Annotated, Any
 
 import httpx
-from fastapi import FastAPI
+import psycopg
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
 
 from app import config
+from app.api.deps import get_connection, get_http_client
+from app.api.schemas import AskRequest, AskResponse, IngestResponse
+from app.pipeline import SUPPORTED_SUFFIXES, answer_question, ingest_text
+from app.rag.chunking import DEFAULT_CHUNK_SIZE
+from app.rag.embeddings import EmbeddingError
+from app.rag.generation import GenerationError
 from app.storage import supabase
+
+# Uploads are read fully into memory and embedded inside the request, so the
+# ceiling is deliberately modest until T6.3 moves this to a worker.
+MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 
 TITLE = "rag-ai"
 VERSION = "0.1.0"
@@ -29,6 +42,22 @@ Interactive docs are at `/docs`; the OpenAPI schema is at `/openapi.json`.
 """
 
 app = FastAPI(title=TITLE, version=VERSION, description=DESCRIPTION)
+
+Connection = Annotated[psycopg.Connection, Depends(get_connection)]
+HttpClient = Annotated[httpx.Client, Depends(get_http_client)]
+
+
+@app.exception_handler(supabase.StorageError)
+def _storage_unavailable(request: Request, exc: supabase.StorageError) -> JSONResponse:
+    """The database is our dependency, not the caller's mistake."""
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(EmbeddingError)
+@app.exception_handler(GenerationError)
+def _ollama_unavailable(request: Request, exc: Exception) -> JSONResponse:
+    """502: an upstream we depend on failed, rather than a bad request."""
+    return JSONResponse(status_code=502, content={"detail": str(exc)})
 
 
 @app.get("/health", tags=["health"], summary="Liveness")
@@ -88,3 +117,86 @@ def settings() -> dict[str, str]:
     configured is reported.
     """
     return config.describe()
+
+
+def _decode_upload(raw: bytes, filename: str) -> str:
+    """Validate an upload and return its text.
+
+    Extensions are a claim, not evidence -- data/samples holds an IMG_0827.PNG
+    that is actually a JPEG. For the text formats supported today, decoding is
+    the real check: anything that is not UTF-8 text is rejected here rather
+    than reaching the embedding model as mojibake.
+    """
+    suffix = Path(filename).suffix.lower()
+    if suffix not in SUPPORTED_SUFFIXES:
+        raise HTTPException(
+            status_code=415,
+            detail=(
+                f"Unsupported file type {suffix or filename!r}. "
+                f"Supported: {', '.join(sorted(SUPPORTED_SUFFIXES))}. "
+                "PDF and DOCX arrive at T2.5 and T2.6."
+            ),
+        )
+    if len(raw) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File is {len(raw)} bytes; the limit is {MAX_UPLOAD_BYTES}.",
+        )
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=415,
+            detail=(
+                f"{filename} is not UTF-8 text despite its extension ({exc.reason})."
+            ),
+        ) from exc
+    if not text.strip():
+        raise HTTPException(status_code=422, detail=f"{filename} is empty.")
+    return text
+
+
+@app.post(
+    "/documents",
+    tags=["documents"],
+    status_code=201,
+    summary="Upload and ingest a document",
+    response_model=IngestResponse,
+)
+def upload_document(
+    conn: Connection,
+    client: HttpClient,
+    file: Annotated[UploadFile, File(description="A .txt or .md file")],
+    # A form field, not a query parameter: with a multipart upload, -F is what
+    # a caller reaches for, and a query parameter would be silently ignored.
+    max_size: Annotated[int, Form(gt=0, le=8000)] = DEFAULT_CHUNK_SIZE,
+) -> IngestResponse:
+    """Chunk, embed and store an uploaded file.
+
+    Re-uploading the same filename replaces that document's chunks rather
+    than duplicating them, because ids are derived from the source name.
+    """
+    filename = file.filename or "upload"
+    text = _decode_upload(file.file.read(), filename)
+    result = ingest_text(
+        text, source=filename, conn=conn, client=client, max_size=max_size
+    )
+    return IngestResponse.from_result(result)
+
+
+@app.post(
+    "/ask",
+    tags=["ask"],
+    summary="Answer a question from the stored documents",
+    response_model=AskResponse,
+)
+def ask(request: AskRequest, conn: Connection, client: HttpClient) -> AskResponse:
+    """Retrieve the closest chunks and answer from them.
+
+    A refusal is reported as a 200 with is_refusal true: declining for lack
+    of context is the correct outcome, not an error.
+    """
+    answer = answer_question(
+        request.question, conn=conn, client=client, top_k=request.top_k
+    )
+    return AskResponse.from_answer(answer)

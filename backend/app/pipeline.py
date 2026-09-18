@@ -47,9 +47,32 @@ def ingest_file(
     skip_failures: bool = False,
 ) -> IngestResult:
     """Chunk, embed and store one text file."""
-    text = path.read_text()
-    source = str(path)
+    return ingest_text(
+        path.read_text(),
+        source=str(path),
+        conn=conn,
+        client=client,
+        max_size=max_size,
+        skip_failures=skip_failures,
+    )
 
+
+def ingest_text(
+    text: str,
+    *,
+    source: str,
+    conn: psycopg.Connection,
+    client: httpx.Client | None = None,
+    max_size: int = DEFAULT_CHUNK_SIZE,
+    skip_failures: bool = False,
+) -> IngestResult:
+    """Chunk, embed and store text that is already in memory.
+
+    Separate from ingest_file because an upload (T2.2) and a Drive download
+    (T5.3) arrive as bytes with no path on disk. ``source`` is the identity
+    the document is stored under, so re-uploading the same filename updates
+    the existing rows rather than duplicating them.
+    """
     chunks = chunk_document(text, source=source, max_size=max_size)
     run = embed_chunks(chunks, client=client, skip_failures=skip_failures)
 

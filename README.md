@@ -54,11 +54,26 @@ uvicorn app.api.main:app --reload
 
 | route | purpose |
 |---|---|
+| `POST /documents` | upload a `.txt` or `.md` file; chunks, embeds and stores it |
+| `POST /ask` | answer a question from the stored documents, with sources |
 | `/docs` | interactive API documentation |
 | `/openapi.json` | OpenAPI schema |
 | `/health` | liveness; touches nothing |
 | `/health/ready` | readiness; reports whether Postgres and Ollama are reachable |
 | `/config` | effective settings, with no secret values |
+
+```bash
+curl -X POST localhost:8000/documents \
+  -F "file=@data/samples/sample.txt" -F "max_size=500"
+
+curl -X POST localhost:8000/ask \
+  -H 'content-type: application/json' \
+  -d '{"question": "How do I cook pasta?"}'
+```
+
+Uploading the same filename again replaces that document's chunks rather than
+duplicating them. A question the documents cannot answer returns 200 with
+`is_refusal: true` — declining is the correct outcome, not an error.
 
 `API_HOST` and `API_PORT` are read from the environment; see
 [.env.example](.env.example).
